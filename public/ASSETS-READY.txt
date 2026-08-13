@@ -1,0 +1,17 @@
+✅ All required assets are now in place!
+
+Images:
+- plaster.png ✓
+- relief.png ✓
+- work1.jpg ✓
+- work2.jpg ✓
+- work3.jpg ✓
+- work4.jpg ✓
+
+Video:
+- relief-film.mp4 ✓
+
+Note: The video in FilmScrub component now uses the Pexels URL:
+https://www.pexels.com/download/video/6711444/
+
+You can now run: npm run dev
