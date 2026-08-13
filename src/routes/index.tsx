@@ -7,8 +7,8 @@ import work2 from "@/assets/work2.jpg.asset.json";
 import work3 from "@/assets/work3.jpg.asset.json";
 import work4 from "@/assets/work4.jpg.asset.json";
 
-// Using Pexels video URL instead of local file
-const PEXELS_VIDEO = "https://www.pexels.com/download/video/6711444/";
+// Using direct MP4 video URL
+const PEXELS_VIDEO = "https://videos.pexels.com/video-files/6711444/6711444-uhd_2560_1440_25fps.mp4";
 
 const PlasterRevealCanvas = lazy(() => import("@/components/PlasterRevealCanvas"));
 const ScrollStory = lazy(() => import("@/components/ScrollStory"));
@@ -56,7 +56,7 @@ function Index() {
         {/* Layer 2: WebGL canvas that reveals the background */}
         <div className="absolute inset-0 z-10">
           <Suspense fallback={
-            <div className="h-full w-full bg-background/80" />
+            <div className="h-full w-full bg-plaster/20 backdrop-blur-sm" />
           }>
             <PlasterRevealCanvas topUrl={plaster.url} backUrl={relief.url} />
           </Suspense>

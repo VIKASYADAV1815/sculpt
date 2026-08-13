@@ -149,6 +149,9 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     const canvas = ref.current;
     if (!canvas) return;
     const gl = canvas.getContext("webgl", { antialias: false, alpha: false, powerPreference: "high-performance" });
