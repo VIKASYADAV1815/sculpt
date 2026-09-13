@@ -10,37 +10,31 @@ uniform vec2 uAspect;
 uniform vec2 uTexel;
 uniform float uRadius, uDecay, uActive, uTime;
 
-float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
-float vnoise(vec2 p){
-  vec2 i = floor(p), f = fract(p);
-  f = f*f*(3.-2.*f);
-  return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y);
-}
-
 float seg(vec2 p, vec2 a, vec2 b){
   vec2 pa = p-a, ba = b-a;
   float h = clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.,1.);
   return length(pa-ba*h);
 }
+
 void main(){
-  vec2 q = v*uAspect;
+  vec2 q = v * uAspect;
 
-  // Lightweight liquid diffusion
-  vec2 flow = vec2(vnoise(q*2.2 + uTime*0.06), vnoise(q*2.2 + 43.1 - uTime*0.05)) - 0.5;
-  vec2 suv = v + flow * uTexel * 1.5;
-  float c = texture2D(uPrev, suv).r;
-  float n1 = texture2D(uPrev, suv + vec2(uTexel.x, 0.0)*1.5).r;
-  float n2 = texture2D(uPrev, suv - vec2(uTexel.x, 0.0)*1.5).r;
-  float blur = (c*2.0 + n1 + n2) / 4.0;
-  float prev = mix(c, blur, 0.5) * uDecay;
+  // Clean, isotropic decay diffusion (velvety soft edge, zero fluid drift)
+  float c  = texture2D(uPrev, v).r;
+  float n1 = texture2D(uPrev, v + vec2(uTexel.x, 0.0)).r;
+  float n2 = texture2D(uPrev, v - vec2(uTexel.x, 0.0)).r;
+  float n3 = texture2D(uPrev, v + vec2(0.0, uTexel.y)).r;
+  float n4 = texture2D(uPrev, v - vec2(0.0, uTexel.y)).r;
+  float blur = (c * 4.0 + n1 + n2 + n3 + n4) / 8.0;
+  float prev = blur * uDecay;
 
-  // Fluid brush wandering
-  vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.12;
-  vec2 qq = q + w1;
-  float d = seg(qq, uA, uB);
-  float r = uRadius * (0.85 + 0.28 * vnoise(q*2.2 + uTime*0.05));
-  float stamp = pow(1.0 - smoothstep(0.0, r, d), 1.5) * uActive;
-  gl_FragColor = vec4(clamp(max(prev, stamp*0.96) + stamp*0.05, 0.0, 1.0), 0., 0., 1.);
+  // Crisp, stable geometric brush with silky Hermite falloff
+  float d = seg(q, uA, uB);
+  float stamp = smoothstep(uRadius, 0.0, d) * uActive;
+  stamp = stamp * stamp * (3.0 - 2.0 * stamp);
+
+  float nextVal = max(prev, stamp);
+  gl_FragColor = vec4(clamp(nextVal, 0.0, 1.0), 0.0, 0.0, 1.0);
 }`;
 
 const COMP_FRAG = `precision mediump float;
@@ -54,43 +48,30 @@ vec2 cover(vec2 uv, vec2 res, vec2 img){
   vec2 s = rs > ri ? vec2(1.0, ri/rs) : vec2(rs/ri, 1.0);
   return (uv - 0.5)/s + 0.5;
 }
-float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
-float noise(vec2 p){
-  vec2 i = floor(p), f = fract(p);
-  f = f*f*(3.-2.*f);
-  return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
-}
-float fbm(vec2 p){
-  return 0.65 * noise(p) + 0.35 * noise(p*2.05 + 13.7);
-}
+
 void main(){
-  vec2 asp = vec2(uRes.x/uRes.y, 1.0);
-  vec2 q = v*asp;
+  // Pristine, museum-quality sampling without distortion or chromatic aberration
+  vec2 uvBack = cover(v, uRes, uImgBack);
+  vec2 uvTop  = cover(v, uRes, uImgTop);
 
-  // Optimized edge drift
-  float coarse = fbm(q*3.0 + uTime*0.035);
-  float grit = hash(q * 45.0);
+  vec3 back = texture2D(uBack, uvBack).rgb;
+  vec3 top  = texture2D(uTop,  uvTop).rgb;
 
-  // Fast liquid warp
-  vec2 warpA = vec2(fbm(q*2.0 + 3.1 + uTime*0.04), fbm(q*2.0 + 9.7 - uTime*0.035)) - 0.5;
-  vec2 wuv = v + warpA * 0.028;
-  float m = mix(texture2D(uMask, v).r, texture2D(uMask, wuv).r, 0.45);
+  float m = texture2D(uMask, v).r;
 
-  float erode = (coarse - 0.5) * 0.35 + (grit - 0.5) * 0.05;
-  float e = m + erode;
-
-  float reveal = smoothstep(0.18, 0.50, e);
+  // Refined, smooth reveal curve:
+  // Starts soft at the feather edge, reaches 100% full clarity in the core
+  float reveal = smoothstep(0.02, 0.68, m);
   reveal = reveal * reveal * (3.0 - 2.0 * reveal);
-  float rim = smoothstep(0.16, 0.38, e) - smoothstep(0.42, 0.66, e);
 
-  vec2 refr = normalize(warpA + 1e-5) * rim * 0.018;
-  vec3 back = texture2D(uBack, cover(v + refr, uRes, uImgBack)).rgb;
-  vec3 top  = texture2D(uTop,  cover(v - refr*0.4, uRes, uImgTop)).rgb;
+  // Subtle architectural bas-relief bevel:
+  // Gives tactile physical depth to the plaster edge without any fluid shine
+  float bevel = smoothstep(0.06, 0.38, reveal) * (1.0 - smoothstep(0.38, 0.82, reveal));
 
   vec3 col = mix(top, back, reveal);
-  col -= rim * 0.075 * (0.7 + coarse*0.5);
-  col += pow(rim, 2.0) * 0.10;
-  col += (grit - 0.5) * 0.008;
+  // Gentle tactile ambient occlusion along the carved edge
+  col -= bevel * 0.038;
+
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -262,21 +243,45 @@ export default function PlasterRevealCanvas({
     const onMove = (e: PointerEvent) => {
       if (!isVisible) return;
       const r = canvas.getBoundingClientRect();
+      const inBounds =
+        e.clientX >= r.left &&
+        e.clientX <= r.right &&
+        e.clientY >= r.top &&
+        e.clientY <= r.bottom;
+
+      if (!inBounds) {
+        active = 0;
+        return;
+      }
+
       target = {
         x: (e.clientX - r.left) / r.width,
         y: 1 - (e.clientY - r.top) / r.height,
       };
-      if (!hasPointer) {
+      if (!hasPointer || active === 0) {
         cur = { ...target };
         prev = { ...target };
         hasPointer = true;
       }
       active = 1;
     };
+    const onEnter = (e: PointerEvent) => {
+      if (!isVisible) return;
+      const r = canvas.getBoundingClientRect();
+      target = {
+        x: (e.clientX - r.left) / r.width,
+        y: 1 - (e.clientY - r.top) / r.height,
+      };
+      cur = { ...target };
+      prev = { ...target };
+      hasPointer = true;
+      active = 1;
+    };
     const onLeave = () => {
       active = 0;
     };
     window.addEventListener("pointermove", onMove, { passive: true });
+    canvas.addEventListener("pointerenter", onEnter);
     canvas.addEventListener("pointerleave", onLeave);
 
     const uS = {
@@ -309,15 +314,15 @@ export default function PlasterRevealCanvas({
       const t = (performance.now() - t0) / 1000;
 
       prev = { ...cur };
-      // Very lazy lerp — cursor lags far behind the pointer like dragging through water
+      // Velvety, smooth, weighted damping lerp
       cur = {
-        x: cur.x + (target.x - cur.x) * 0.032,
-        y: cur.y + (target.y - cur.y) * 0.032,
+        x: cur.x + (target.x - cur.x) * 0.045,
+        y: cur.y + (target.y - cur.y) * 0.045,
       };
       const asp = canvas.width / canvas.height;
       const vel = Math.hypot((cur.x - prev.x) * asp, cur.y - prev.y);
-      // Keep brush generously sized — slow but clearly reveals the image beneath
-      const radius = 0.09 + Math.min(vel * 2.8, 0.07);
+      // Stable, generous luxury reveal window (smooth, calm, non-erratic)
+      const radius = 0.115 + Math.min(vel * 0.4, 0.015);
 
       // stroke pass -> b
       gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb);
@@ -331,8 +336,8 @@ export default function PlasterRevealCanvas({
       gl.uniform2f(uS.aspect, asp, 1);
       gl.uniform2f(uS.texel, 1 / mw, 1 / mh);
       gl.uniform1f(uS.radius, radius);
-      // High decay = marks persist long, need multiple slow passes to fully reveal
-      gl.uniform1f(uS.decay, 0.9978);
+      // Graceful, calm persistence (slowly dissolving over 3-4 seconds)
+      gl.uniform1f(uS.decay, 0.996);
       gl.uniform1f(uS.time, t);
       gl.uniform1f(uS.active, hasPointer ? active : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -384,6 +389,7 @@ export default function PlasterRevealCanvas({
       observer.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerenter", onEnter);
       canvas.removeEventListener("pointerleave", onLeave);
     };
   }, [topUrl, backUrl]);
