@@ -38,9 +38,9 @@ void main(){
   vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.75;
   vec2 qq = q + w1;
   float d = seg(qq, uA, uB);
-  float r = uRadius * (0.88 + 0.3 * vnoise(q*2.2 + uTime*0.05));
-  float stamp = pow(1.0 - smoothstep(0.0, r, d), 1.6) * uActive;
-  gl_FragColor = vec4(clamp(max(prev, stamp*0.98) + stamp*0.06, 0.0, 1.0), 0., 0., 1.);
+  float r = uRadius * (0.72 + 0.22 * vnoise(q*2.2 + uTime*0.05));
+  float stamp = pow(1.0 - smoothstep(0.0, r, d), 2.2) * uActive;
+  gl_FragColor = vec4(clamp(max(prev, stamp*0.82) + stamp*0.04, 0.0, 1.0), 0., 0., 1.);
 }`;
 
 const COMP_FRAG = `precision mediump float;
@@ -79,9 +79,9 @@ void main(){
   float erode = (coarse - 0.5) * 0.35 + (grit - 0.5) * 0.05;
   float e = m + erode;
 
-  float reveal = smoothstep(0.30, 0.62, e);
-  reveal = reveal * reveal * (3.0 - 2.0 * reveal);
-  float rim = smoothstep(0.28, 0.46, e) - smoothstep(0.50, 0.78, e);
+  float reveal = smoothstep(0.48, 0.78, e);
+  reveal = reveal * reveal * (3.0 - 2.0 * reveal) * 0.72;
+  float rim = smoothstep(0.44, 0.60, e) - smoothstep(0.66, 0.90, e);
 
   vec2 refr = normalize(warpA + 1e-5) * rim * 0.018;
   vec3 back = texture2D(uBack, cover(v + refr, uRes, uImgBack)).rgb;
@@ -310,12 +310,12 @@ export default function PlasterRevealCanvas({
 
       prev = { ...cur };
       cur = {
-        x: cur.x + (target.x - cur.x) * 0.14,
-        y: cur.y + (target.y - cur.y) * 0.14,
+        x: cur.x + (target.x - cur.x) * 0.10,
+        y: cur.y + (target.y - cur.y) * 0.10,
       };
       const asp = canvas.width / canvas.height;
       const vel = Math.hypot((cur.x - prev.x) * asp, cur.y - prev.y);
-      const radius = 0.1 + Math.min(vel * 5.0, 0.13);
+      const radius = 0.055 + Math.min(vel * 3.5, 0.072);
 
       // stroke pass -> b
       gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb);
@@ -329,7 +329,7 @@ export default function PlasterRevealCanvas({
       gl.uniform2f(uS.aspect, asp, 1);
       gl.uniform2f(uS.texel, 1 / mw, 1 / mh);
       gl.uniform1f(uS.radius, radius);
-      gl.uniform1f(uS.decay, 0.9962);
+      gl.uniform1f(uS.decay, 0.9920);
       gl.uniform1f(uS.time, t);
       gl.uniform1f(uS.active, hasPointer ? active : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
