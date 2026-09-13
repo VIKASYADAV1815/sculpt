@@ -38,9 +38,9 @@ void main(){
   vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.75;
   vec2 qq = q + w1;
   float d = seg(qq, uA, uB);
-  float r = uRadius * (0.72 + 0.22 * vnoise(q*2.2 + uTime*0.05));
-  float stamp = pow(1.0 - smoothstep(0.0, r, d), 2.2) * uActive;
-  gl_FragColor = vec4(clamp(max(prev, stamp*0.82) + stamp*0.04, 0.0, 1.0), 0., 0., 1.);
+  float r = uRadius * (0.85 + 0.28 * vnoise(q*2.2 + uTime*0.05));
+  float stamp = pow(1.0 - smoothstep(0.0, r, d), 1.5) * uActive;
+  gl_FragColor = vec4(clamp(max(prev, stamp*0.96) + stamp*0.05, 0.0, 1.0), 0., 0., 1.);
 }`;
 
 const COMP_FRAG = `precision mediump float;
@@ -79,9 +79,9 @@ void main(){
   float erode = (coarse - 0.5) * 0.35 + (grit - 0.5) * 0.05;
   float e = m + erode;
 
-  float reveal = smoothstep(0.48, 0.78, e);
-  reveal = reveal * reveal * (3.0 - 2.0 * reveal) * 0.72;
-  float rim = smoothstep(0.44, 0.60, e) - smoothstep(0.66, 0.90, e);
+  float reveal = smoothstep(0.22, 0.58, e);
+  reveal = reveal * reveal * (3.0 - 2.0 * reveal);
+  float rim = smoothstep(0.20, 0.42, e) - smoothstep(0.46, 0.72, e);
 
   vec2 refr = normalize(warpA + 1e-5) * rim * 0.018;
   vec3 back = texture2D(uBack, cover(v + refr, uRes, uImgBack)).rgb;
@@ -316,8 +316,8 @@ export default function PlasterRevealCanvas({
       };
       const asp = canvas.width / canvas.height;
       const vel = Math.hypot((cur.x - prev.x) * asp, cur.y - prev.y);
-      // Keep brush small and barely velocity-sensitive — slow revelation
-      const radius = 0.038 + Math.min(vel * 1.8, 0.028);
+      // Keep brush generously sized — slow but clearly reveals the image beneath
+      const radius = 0.09 + Math.min(vel * 2.8, 0.07);
 
       // stroke pass -> b
       gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb);
