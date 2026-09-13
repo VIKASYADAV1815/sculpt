@@ -37,7 +37,7 @@ cd relief-frontend
 npm install
 ```
 
-**Note**: Node.js 22.12.0+ is recommended (package.json specifies this). 
+**Note**: Node.js 22.12.0+ is recommended (package.json specifies this).
 If you have Node 20.x, the packages will install with warnings but should work.
 
 ### 2. Add Required Assets
@@ -67,6 +67,7 @@ npm run preview
 ## 🎨 Features Implemented
 
 ### Components (11 files)
+
 - **PlasterRevealCanvas** - WebGL shader effect for hero reveal
 - **WaveGallery** - Three.js horizontal scroll gallery
 - **ScrollStory** - Full scroll-based storytelling component
@@ -80,12 +81,14 @@ npm run preview
 - **SiteFooter** - Footer component
 
 ### Routes (5 pages)
+
 - `/` - Homepage with hero + scroll story
 - `/works` - Portfolio grid
 - `/studio` - Studio methodology
 - `/commissions` - Pricing & enquiry form
 
 ### Tech Stack
+
 - TanStack Start (React SSR framework)
 - TanStack Router (file-based routing)
 - TanStack Query (data fetching)
@@ -97,20 +100,24 @@ npm run preview
 ## 🐛 Known Issues & Warnings
 
 ### Node Version Warning
+
 Package requires Node 22.12.0+. If using Node 20.x, you'll see warnings but it should still work.
 
 ### Deprecated Packages
+
 - `tsconfck@3.1.6` - Can be ignored
 - `recharts@2.15.4` - Not actively used in this project
 
 ## 📝 Configuration Notes
 
 ### TypeScript
+
 - Strict mode enabled
 - Path alias `@/*` points to `src/*`
 - Full type safety across the project
 
 ### Vite
+
 - Uses `@lovable.dev/vite-tanstack-config` which includes:
   - TanStack Start plugin
   - React plugin
@@ -119,6 +126,7 @@ Package requires Node 22.12.0+. If using Node 20.x, you'll see warnings but it s
   - Nitro (for SSR/deployment)
 
 ### Styling
+
 - Tailwind v4 with custom theme
 - Custom fonts: Cormorant Garamond (display), Jost (sans)
 - oklch color space for better color manipulation
@@ -133,6 +141,7 @@ For other platforms, you may need to adjust the Nitro preset in `vite.config.ts`
 ## 📧 Support
 
 Refer to:
+
 - `README.md` - Full project documentation
 - `public/ASSETS-NEEDED.md` - Asset requirements
 - Component files - Each has inline documentation

@@ -37,7 +37,9 @@ export default function SiteNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
-        scrolled ? "border-b border-ink/10 bg-background/80 backdrop-blur-md" : "border-b border-transparent"
+        scrolled
+          ? "border-b border-ink/10 bg-background/80 backdrop-blur-md"
+          : "border-b border-transparent"
       }`}
     >
       <nav className="flex items-center justify-between gap-6 px-6 py-4 sm:px-10">

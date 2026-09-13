@@ -16,10 +16,14 @@ export const Route = createFileRoute("/works")({
         content:
           "Available lime-plaster bas-relief panels and editions from the Sculpt & Crown atelier, with dimensions, materials and enquiry details.",
       },
-      { property: "og:title", content: "Works — Sculpt & Crown Plaster Reliefs" },
+      {
+        property: "og:title",
+        content: "Works — Sculpt & Crown Plaster Reliefs",
+      },
       {
         property: "og:description",
-        content: "Available lime-plaster bas-relief panels and editions from the atelier.",
+        content:
+          "Available lime-plaster bas-relief panels and editions from the atelier.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -88,9 +92,13 @@ function WorksPage() {
             text="Works held in the atelier"
             className="mt-6 max-w-4xl font-display text-[12vw] font-light leading-[0.92] tracking-[-0.035em] sm:text-[5.4vw]"
           />
-          <RevealText delay={0.15} className="mt-8 max-w-lg text-[13px] font-light leading-[1.9] text-ink-soft">
-            Every panel is pressed by hand in lime and marble dust, cured for six weeks, then finished for the
-            light of the room it will live in. Prices include crating; installation is quoted separately.
+          <RevealText
+            delay={0.15}
+            className="mt-8 max-w-lg text-[13px] font-light leading-[1.9] text-ink-soft"
+          >
+            Every panel is pressed by hand in lime and marble dust, cured for
+            six weeks, then finished for the light of the room it will live in.
+            Prices include crating; installation is quoted separately.
           </RevealText>
         </div>
       </section>
@@ -119,8 +127,12 @@ function WorksPage() {
               </div>
 
               <div className="mt-6 flex items-baseline justify-between gap-6 border-b border-ink/10 pb-4">
-                <h2 className="font-display text-3xl font-light tracking-[-0.02em]">{p.title}</h2>
-                <p className="text-[11px] font-light uppercase tracking-[0.28em] text-ink-soft">{p.price}</p>
+                <h2 className="font-display text-3xl font-light tracking-[-0.02em]">
+                  {p.title}
+                </h2>
+                <p className="text-[11px] font-light uppercase tracking-[0.28em] text-ink-soft">
+                  {p.price}
+                </p>
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-y-2 text-[10px] font-light uppercase tracking-[0.26em] text-ink-soft/85">
                 <dt className="text-ink-soft/60">Year</dt>
@@ -132,7 +144,9 @@ function WorksPage() {
                 <dt className="text-ink-soft/60">Edition</dt>
                 <dd className="text-right">{p.edition}</dd>
               </dl>
-              <p className="mt-5 max-w-md text-[13px] font-light leading-[1.9] text-ink-soft">{p.note}</p>
+              <p className="mt-5 max-w-md text-[13px] font-light leading-[1.9] text-ink-soft">
+                {p.note}
+              </p>
               <Link
                 to="/commissions"
                 className="mt-6 inline-block text-[10px] font-light uppercase tracking-[0.32em] text-ink underline-offset-8 hover:underline"

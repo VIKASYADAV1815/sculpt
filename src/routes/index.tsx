@@ -7,10 +7,9 @@ import work2 from "@/assets/work2.jpg.asset.json";
 import work3 from "@/assets/work3.jpg.asset.json";
 import work4 from "@/assets/work4.jpg.asset.json";
 
-// Using direct MP4 video URL
-const PEXELS_VIDEO = "https://videos.pexels.com/video-files/6711444/6711444-uhd_2560_1440_25fps.mp4";
-
-const PlasterRevealCanvas = lazy(() => import("@/components/PlasterRevealCanvas"));
+const PlasterRevealCanvas = lazy(
+  () => import("@/components/PlasterRevealCanvas"),
+);
 const ScrollStory = lazy(() => import("@/components/ScrollStory"));
 const SmoothScroll = lazy(() => import("@/components/SmoothScroll"));
 
@@ -23,10 +22,14 @@ export const Route = createFileRoute("/")({
         content:
           "Sculpt & Crown creates bespoke bas-relief plaster artistry. Move your cursor to reveal beauty carved from intention.",
       },
-      { property: "og:title", content: "Sculpt & Crown — The Delicate Art of Crafted Dreams" },
+      {
+        property: "og:title",
+        content: "Sculpt & Crown — The Delicate Art of Crafted Dreams",
+      },
       {
         property: "og:description",
-        content: "Bespoke bas-relief plaster artistry. Beauty carved from intention.",
+        content:
+          "Bespoke bas-relief plaster artistry. Beauty carved from intention.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -41,7 +44,7 @@ function Index() {
       <Suspense fallback={null}>
         <SmoothScroll />
       </Suspense>
-      <section className="relative h-screen w-full overflow-hidden">
+      <section className="relative h-[100dvh] min-h-[540px] w-full overflow-hidden">
         {/* Layer 1: Background relief image (always visible behind) */}
         <div className="absolute inset-0 z-0">
           <img
@@ -52,12 +55,14 @@ function Index() {
             className="h-full w-full object-cover"
           />
         </div>
-        
+
         {/* Layer 2: WebGL canvas that reveals the background */}
         <div className="absolute inset-0 z-10">
-          <Suspense fallback={
-            <div className="h-full w-full bg-plaster/20 backdrop-blur-sm" />
-          }>
+          <Suspense
+            fallback={
+              <div className="h-full w-full bg-plaster/20 backdrop-blur-sm" />
+            }
+          >
             <PlasterRevealCanvas topUrl={plaster.url} backUrl={relief.url} />
           </Suspense>
         </div>
@@ -70,7 +75,11 @@ function Index() {
             <Link
               to="/works"
               className="pointer-events-auto rise hidden shrink-0 whitespace-nowrap text-[11px] font-light uppercase tracking-[0.34em] text-ink-soft transition-colors hover:text-ink md:block"
-              style={{ writingMode: "vertical-rl", rotate: "180deg", animationDelay: "320ms" }}
+              style={{
+                writingMode: "vertical-rl",
+                rotate: "180deg",
+                animationDelay: "320ms",
+              }}
             >
               See all projects
             </Link>
@@ -116,10 +125,8 @@ function Index() {
           </footer>
         </div>
       </section>
-      <Suspense fallback={
-        <div className="min-h-screen bg-background" />
-      }>
-        <ScrollStory images={[work1.url, work2.url, work3.url, work4.url]} video={PEXELS_VIDEO} />
+      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <ScrollStory images={[work1.url, work2.url, work3.url, work4.url]} />
       </Suspense>
     </main>
   );

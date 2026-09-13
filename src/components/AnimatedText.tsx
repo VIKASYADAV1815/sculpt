@@ -25,7 +25,10 @@ export function RevealHeading({
       className={className}
     >
       {words.map((w, i) => (
-        <span key={`${w}-${i}`} className="mr-[0.26em] inline-block overflow-hidden py-[0.06em] align-bottom">
+        <span
+          key={`${w}-${i}`}
+          className="mr-[0.26em] inline-block overflow-hidden py-[0.06em] align-bottom"
+        >
           <motion.span
             variants={{ hidden: { y: "110%" }, show: { y: "0%" } }}
             transition={{ duration: 0.9, ease: EASE }}
@@ -63,7 +66,13 @@ export function RevealText({
 }
 
 /** Small uppercase label with a drawing rule. */
-export function Kicker({ label, className = "" }: { label: string; className?: string }) {
+export function Kicker({
+  label,
+  className = "",
+}: {
+  label: string;
+  className?: string;
+}) {
   return (
     <div className={`flex items-center gap-4 ${className}`}>
       <motion.span

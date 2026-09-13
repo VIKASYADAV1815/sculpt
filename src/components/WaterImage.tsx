@@ -32,7 +32,10 @@ export default function WaterImage({
       if (turbRef.current) {
         const bx = 0.006 + Math.sin(t * 0.35) * 0.0018 + v * 0.004;
         const by = 0.011 + Math.cos(t * 0.27) * 0.0022 + v * 0.006;
-        turbRef.current.setAttribute("baseFrequency", `${bx.toFixed(5)} ${by.toFixed(5)}`);
+        turbRef.current.setAttribute(
+          "baseFrequency",
+          `${bx.toFixed(5)} ${by.toFixed(5)}`,
+        );
       }
       if (dispRef.current) {
         dispRef.current.setAttribute("scale", (6 + v * strength).toFixed(2));
@@ -54,9 +57,29 @@ export default function WaterImage({
       onMouseLeave={() => setHovered(false)}
     >
       <svg aria-hidden="true" className="pointer-events-none absolute h-0 w-0">
-        <filter id={`water-${uid}`} x="-12%" y="-12%" width="124%" height="124%">
-          <feTurbulence ref={turbRef} type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="3" seed="11" result="n" />
-          <feDisplacementMap ref={dispRef} in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" />
+        <filter
+          id={`water-${uid}`}
+          x="-12%"
+          y="-12%"
+          width="124%"
+          height="124%"
+        >
+          <feTurbulence
+            ref={turbRef}
+            type="fractalNoise"
+            baseFrequency="0.006 0.011"
+            numOctaves="3"
+            seed="11"
+            result="n"
+          />
+          <feDisplacementMap
+            ref={dispRef}
+            in="SourceGraphic"
+            in2="n"
+            scale="6"
+            xChannelSelector="R"
+            yChannelSelector="G"
+          />
         </filter>
       </svg>
       <img

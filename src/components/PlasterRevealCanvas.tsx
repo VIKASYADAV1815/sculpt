@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 
 const VERT = `attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}`;
 
-const STROKE_FRAG = `precision highp float;
+const STROKE_FRAG = `precision mediump float;
 varying vec2 v;
 uniform sampler2D uPrev;
-uniform vec2 uA, uB;      // aspect-corrected mouse positions
+uniform vec2 uA, uB;
 uniform vec2 uAspect;
 uniform vec2 uTexel;
 uniform float uRadius, uDecay, uActive, uTime;
@@ -16,11 +16,6 @@ float vnoise(vec2 p){
   f = f*f*(3.-2.*f);
   return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y);
 }
-float fbm2(vec2 p){
-  float a = 0.5, s = 0.0;
-  for(int i=0;i<4;i++){ s += a*vnoise(p); p *= 2.11; p += 11.7; a *= 0.5; }
-  return s;
-}
 
 float seg(vec2 p, vec2 a, vec2 b){
   vec2 pa = p-a, ba = b-a;
@@ -30,29 +25,25 @@ float seg(vec2 p, vec2 a, vec2 b){
 void main(){
   vec2 q = v*uAspect;
 
-  // --- liquid diffusion: the mask slowly bleeds outward like wet plaster ---
-  vec2 flow = vec2(fbm2(q*2.3 + uTime*0.06), fbm2(q*2.3 + 51.7 - uTime*0.05)) - 0.5;
-  vec2 suv = v + flow * uTexel * 6.0;
+  // Lightweight liquid diffusion
+  vec2 flow = vec2(vnoise(q*2.2 + uTime*0.06), vnoise(q*2.2 + 43.1 - uTime*0.05)) - 0.5;
+  vec2 suv = v + flow * uTexel * 5.0;
   float c = texture2D(uPrev, suv).r;
-  float n1 = texture2D(uPrev, suv + vec2(uTexel.x, 0.0)*1.6).r;
-  float n2 = texture2D(uPrev, suv - vec2(uTexel.x, 0.0)*1.6).r;
-  float n3 = texture2D(uPrev, suv + vec2(0.0, uTexel.y)*1.6).r;
-  float n4 = texture2D(uPrev, suv - vec2(0.0, uTexel.y)*1.6).r;
-  float blur = (c*2.0 + n1 + n2 + n3 + n4) / 6.0;
-  float prev = mix(c, blur, 0.55) * uDecay;
+  float n1 = texture2D(uPrev, suv + vec2(uTexel.x, 0.0)*1.5).r;
+  float n2 = texture2D(uPrev, suv - vec2(uTexel.x, 0.0)*1.5).r;
+  float blur = (c*2.0 + n1 + n2) / 4.0;
+  float prev = mix(c, blur, 0.5) * uDecay;
 
-  // soft, wandering brush — gentle warp so the front stays fluid, not circular
-  vec2 w1 = vec2(fbm2(q*3.4 + 2.7 + uTime*0.08), fbm2(q*3.4 + 19.3 - uTime*0.07)) - 0.5;
-  vec2 w2 = vec2(fbm2(q*9.0 + 41.1), fbm2(q*9.0 + 77.9)) - 0.5;
-  vec2 qq = q + w1*uRadius*0.85 + w2*uRadius*0.22;
+  // Fluid brush wandering
+  vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.75;
+  vec2 qq = q + w1;
   float d = seg(qq, uA, uB);
-  float r = uRadius * (0.85 + 0.4*fbm2(q*2.4 + uTime*0.05));
-  // smooth, ink-like falloff
+  float r = uRadius * (0.88 + 0.3 * vnoise(q*2.2 + uTime*0.05));
   float stamp = pow(1.0 - smoothstep(0.0, r, d), 1.6) * uActive;
   gl_FragColor = vec4(clamp(max(prev, stamp*0.98) + stamp*0.06, 0.0, 1.0), 0., 0., 1.);
 }`;
 
-const COMP_FRAG = `precision highp float;
+const COMP_FRAG = `precision mediump float;
 varying vec2 v;
 uniform sampler2D uMask, uTop, uBack;
 uniform vec2 uRes, uImgTop, uImgBack;
@@ -70,41 +61,33 @@ float noise(vec2 p){
   return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
 }
 float fbm(vec2 p){
-  float a = 0.5, s = 0.0;
-  for(int i=0;i<6;i++){ s += a*noise(p); p *= 2.03; p += 17.3; a *= 0.5; }
-  return s;
+  return 0.65 * noise(p) + 0.35 * noise(p*2.05 + 13.7);
 }
 void main(){
   vec2 asp = vec2(uRes.x/uRes.y, 1.0);
   vec2 q = v*asp;
 
-  // slow-drifting fields — motion keeps the edge feeling alive and liquid
+  // Optimized edge drift
   float coarse = fbm(q*3.0 + uTime*0.035);
-  float fine   = fbm(q*9.0 - uTime*0.05);
-  float grit   = fbm(q*70.0);
+  float grit = hash(q * 45.0);
 
-  // layered flow warps: the boundary meanders like paint in water
-  vec2 warpA = vec2(fbm(q*1.9+3.1  + uTime*0.05), fbm(q*1.9+9.7  - uTime*0.04)) - 0.5;
-  vec2 warpB = vec2(fbm(q*5.5+21.3 - uTime*0.03), fbm(q*5.5+63.1 + uTime*0.03)) - 0.5;
-  vec2 warpC = vec2(fbm(q*14.0+5.9), fbm(q*14.0+88.2)) - 0.5;
-  vec2 wuv = v + warpA*0.070 + warpB*0.026 + warpC*0.008;
+  // Fast liquid warp
+  vec2 warpA = vec2(fbm(q*2.0 + 3.1 + uTime*0.04), fbm(q*2.0 + 9.7 - uTime*0.035)) - 0.5;
+  vec2 wuv = v + warpA * 0.07;
   float m = mix(texture2D(uMask, v).r, texture2D(uMask, wuv).r, 0.75);
 
-  float erode = (coarse-0.5)*0.30 + (fine-0.5)*0.16 + (grit-0.5)*0.04;
+  float erode = (coarse - 0.5) * 0.35 + (grit - 0.5) * 0.05;
   float e = m + erode;
 
-  // wide, silky transition instead of a crumbly threshold
   float reveal = smoothstep(0.30, 0.62, e);
-  reveal = reveal*reveal*(3.0-2.0*reveal);
+  reveal = reveal * reveal * (3.0 - 2.0 * reveal);
   float rim = smoothstep(0.28, 0.46, e) - smoothstep(0.50, 0.78, e);
 
-  // refraction: the back layer bends under the liquid lip
-  vec2 refr = normalize(warpA + warpB + 1e-5) * rim * 0.018;
+  vec2 refr = normalize(warpA + 1e-5) * rim * 0.018;
   vec3 back = texture2D(uBack, cover(v + refr, uRes, uImgBack)).rgb;
   vec3 top  = texture2D(uTop,  cover(v - refr*0.4, uRes, uImgTop)).rgb;
 
   vec3 col = mix(top, back, reveal);
-  // glossy meniscus: soft shadow then a satin highlight along the flow front
   col -= rim * 0.075 * (0.7 + coarse*0.5);
   col += pow(rim, 2.0) * 0.10;
   col += (grit - 0.5) * 0.008;
@@ -125,10 +108,24 @@ function program(gl: WebGLRenderingContext, fs: string) {
   return p;
 }
 
-function loadTex(gl: WebGLRenderingContext, url: string, onLoad: (w: number, h: number) => void) {
+function loadTex(
+  gl: WebGLRenderingContext,
+  url: string,
+  onLoad: (w: number, h: number) => void,
+) {
   const tex = gl.createTexture()!;
   gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([240, 238, 232, 255]));
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([240, 238, 232, 255]),
+  );
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -145,21 +142,35 @@ function loadTex(gl: WebGLRenderingContext, url: string, onLoad: (w: number, h: 
   return tex;
 }
 
-export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: string; backUrl: string }) {
+export default function PlasterRevealCanvas({
+  topUrl,
+  backUrl,
+}: {
+  topUrl: string;
+  backUrl: string;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Only run on client side
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") return;
+
     const canvas = ref.current;
     if (!canvas) return;
-    const gl = canvas.getContext("webgl", { antialias: false, alpha: false, powerPreference: "high-performance" });
+    const gl = canvas.getContext("webgl", {
+      antialias: false,
+      alpha: false,
+      powerPreference: "high-performance",
+    });
     if (!gl) return;
 
     const quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 3, -1, -1, 3]),
+      gl.STATIC_DRAW,
+    );
 
     const strokeP = program(gl, STROKE_FRAG);
     const compP = program(gl, COMP_FRAG);
@@ -172,40 +183,68 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
 
     const imgTop = { w: 1, h: 1 };
     const imgBack = { w: 1, h: 1 };
-    const texTop = loadTex(gl, topUrl, (w, h) => { imgTop.w = w; imgTop.h = h; });
-    const texBack = loadTex(gl, backUrl, (w, h) => { imgBack.w = w; imgBack.h = h; });
+    const texTop = loadTex(gl, topUrl, (w, h) => {
+      imgTop.w = w;
+      imgTop.h = h;
+    });
+    const texBack = loadTex(gl, backUrl, (w, h) => {
+      imgBack.w = w;
+      imgBack.h = h;
+    });
 
     type FBO = { fb: WebGLFramebuffer; tex: WebGLTexture };
     const makeFBO = (w: number, h: number): FBO => {
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        w,
+        h,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null,
+      );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       const fb = gl.createFramebuffer()!;
       gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        tex,
+        0,
+      );
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       return { fb, tex };
     };
 
-    let mw = 0, mh = 0;
-    let a: FBO | null = null, b: FBO | null = null;
-    const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
+    let mw = 0,
+      mh = 0;
+    let a: FBO | null = null,
+      b: FBO | null = null;
+    const dpr = () => Math.min(window.devicePixelRatio || 1, 1.0);
 
     const resize = () => {
       const w = Math.floor(canvas.clientWidth * dpr());
       const h = Math.floor(canvas.clientHeight * dpr());
       if (!w || !h) return;
-      canvas.width = w; canvas.height = h;
-      const nw = Math.max(2, Math.floor(w / 1.5)), nh = Math.max(2, Math.floor(h / 1.5));
+      canvas.width = w;
+      canvas.height = h;
+      const nw = Math.max(2, Math.floor(w / 2)),
+        nh = Math.max(2, Math.floor(h / 2));
       if (nw !== mw || nh !== mh) {
-        mw = nw; mh = nh;
-        a = makeFBO(mw, mh); b = makeFBO(mw, mh);
+        mw = nw;
+        mh = nh;
+        a = makeFBO(mw, mh);
+        b = makeFBO(mw, mh);
       }
     };
     resize();
@@ -217,14 +256,26 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
     let prev = { x: 0.5, y: 0.5 };
     let active = 0;
     let hasPointer = false;
+    let isVisible = true;
+    let running = true;
 
     const onMove = (e: PointerEvent) => {
+      if (!isVisible) return;
       const r = canvas.getBoundingClientRect();
-      target = { x: (e.clientX - r.left) / r.width, y: 1 - (e.clientY - r.top) / r.height };
-      if (!hasPointer) { cur = { ...target }; prev = { ...target }; hasPointer = true; }
+      target = {
+        x: (e.clientX - r.left) / r.width,
+        y: 1 - (e.clientY - r.top) / r.height,
+      };
+      if (!hasPointer) {
+        cur = { ...target };
+        prev = { ...target };
+        hasPointer = true;
+      }
       active = 1;
     };
-    const onLeave = () => { active = 0; };
+    const onLeave = () => {
+      active = 0;
+    };
     window.addEventListener("pointermove", onMove, { passive: true });
     canvas.addEventListener("pointerleave", onLeave);
 
@@ -252,12 +303,16 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
     let raf = 0;
     const t0 = performance.now();
     const render = () => {
+      if (!running) return;
       raf = requestAnimationFrame(render);
       if (!a || !b) return;
       const t = (performance.now() - t0) / 1000;
 
       prev = { ...cur };
-      cur = { x: cur.x + (target.x - cur.x) * 0.14, y: cur.y + (target.y - cur.y) * 0.14 };
+      cur = {
+        x: cur.x + (target.x - cur.x) * 0.14,
+        y: cur.y + (target.y - cur.y) * 0.14,
+      };
       const asp = canvas.width / canvas.height;
       const vel = Math.hypot((cur.x - prev.x) * asp, cur.y - prev.y);
       const radius = 0.1 + Math.min(vel * 5.0, 0.13);
@@ -278,15 +333,23 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
       gl.uniform1f(uS.time, t);
       gl.uniform1f(uS.active, hasPointer ? active : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      const tmp = a; a = b; b = tmp;
+      const tmp = a;
+      a = b;
+      b = tmp;
 
       // composite
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.useProgram(compP);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, a.tex); gl.uniform1i(uC.mask, 0);
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texTop); gl.uniform1i(uC.top, 1);
-      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, texBack); gl.uniform1i(uC.back, 2);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, a.tex);
+      gl.uniform1i(uC.mask, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, texTop);
+      gl.uniform1i(uC.top, 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, texBack);
+      gl.uniform1i(uC.back, 2);
       gl.uniform2f(uC.res, canvas.width, canvas.height);
       gl.uniform2f(uC.it, imgTop.w, imgTop.h);
       gl.uniform2f(uC.ib, imgBack.w, imgBack.h);
@@ -295,13 +358,39 @@ export default function PlasterRevealCanvas({ topUrl, backUrl }: { topUrl: strin
     };
     raf = requestAnimationFrame(render);
 
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        const visible = entry?.isIntersecting ?? false;
+        isVisible = visible;
+        if (visible && !running) {
+          running = true;
+          raf = requestAnimationFrame(render);
+        } else if (!visible && running) {
+          running = false;
+          cancelAnimationFrame(raf);
+        }
+      },
+      { threshold: 0.05 },
+    );
+    observer.observe(canvas);
+
     return () => {
+      running = false;
       cancelAnimationFrame(raf);
+      observer.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);
     };
   }, [topUrl, backUrl]);
 
-  return <canvas ref={ref} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
+  return (
+    <canvas
+      ref={ref}
+      className="absolute inset-0 h-full w-full touch-pan-y"
+      style={{ touchAction: "pan-y" }}
+      aria-hidden="true"
+    />
+  );
 }

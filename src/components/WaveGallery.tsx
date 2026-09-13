@@ -81,14 +81,30 @@ const fragmentShader = /* glsl */ `
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /** Caption that re-letters itself, kerning open, whenever the active slide changes. */
-function KernedTitle({ text, className = "" }: { text: string; className?: string }) {
+function KernedTitle({
+  text,
+  className = "",
+}: {
+  text: string;
+  className?: string;
+}) {
   return (
     <span className={`flex flex-wrap overflow-hidden ${className}`}>
       {text.split("").map((c, i) => (
         <motion.span
           key={`${text}-${i}`}
-          initial={{ y: "105%", opacity: 0, letterSpacing: "0.16em", filter: "blur(6px)" }}
-          animate={{ y: "0%", opacity: 1, letterSpacing: "-0.02em", filter: "blur(0px)" }}
+          initial={{
+            y: "105%",
+            opacity: 0,
+            letterSpacing: "0.16em",
+            filter: "blur(6px)",
+          }}
+          animate={{
+            y: "0%",
+            opacity: 1,
+            letterSpacing: "-0.02em",
+            filter: "blur(0px)",
+          }}
           transition={{ duration: 0.85, ease: EASE, delay: i * 0.032 }}
           className="inline-block will-change-transform"
         >
@@ -99,7 +115,15 @@ function KernedTitle({ text, className = "" }: { text: string; className?: strin
   );
 }
 
-function FadeSwap({ text, className = "", delay = 0 }: { text: string; className?: string; delay?: number }) {
+function FadeSwap({
+  text,
+  className = "",
+  delay = 0,
+}: {
+  text: string;
+  className?: string;
+  delay?: number;
+}) {
   return (
     <motion.span
       key={text}
@@ -119,22 +143,33 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [active, setActive] = useState(0);
   const progressMV = useMotionValue(0);
-  const smoothProgress = useSpring(progressMV, { stiffness: 90, damping: 26, mass: 0.5 });
-  const progressWidth = useTransform(smoothProgress, (v) => `${Math.min(100, Math.max(0, v * 100))}%`);
+  const smoothProgress = useSpring(progressMV, {
+    stiffness: 90,
+    damping: 26,
+    mass: 0.5,
+  });
+  const progressWidth = useTransform(
+    smoothProgress,
+    (v) => `${Math.min(100, Math.max(0, v * 100))}%`,
+  );
 
   useEffect(() => {
     const mount = mountRef.current;
     const section = sectionRef.current;
     const canvas = canvasRef.current;
-    (window as any).__wgInit = { mount: !!mount, section: !!sectionRef.current, canvas: !!canvas };
     if (!mount || !section || !canvas) return;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.z = 5;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setClearColor(0x000000, 0);
 
     const loader = new THREE.TextureLoader();
@@ -154,18 +189,20 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
           uVelocity: { value: 0 },
           uTime: { value: 0 },
           uFocus: { value: 0 },
-          uImgAspect: { value: new THREE.Vector2(baseWidth / baseHeight, def.aspect) },
+          uImgAspect: {
+            value: new THREE.Vector2(baseWidth / baseHeight, def.aspect),
+          },
         },
         transparent: true,
       });
 
       const tex = loader.load(def.src, (t) => {
         t.colorSpace = THREE.SRGBColorSpace;
-        (material.uniforms['uImgAspect']!.value as THREE.Vector2).set(
+        (material.uniforms["uImgAspect"]!.value as THREE.Vector2).set(
           baseWidth / baseHeight,
           t.image.width / t.image.height,
         );
-        material.uniforms['uTex']!.value = t;
+        material.uniforms["uTex"]!.value = t;
       });
       tex.colorSpace = THREE.SRGBColorSpace;
 
@@ -218,6 +255,8 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
     window.addEventListener("scroll", onScroll, { passive: true });
 
     const onDown = (e: PointerEvent) => {
+      // Don't capture touch pointer so native mobile scroll works without interference
+      if (e.pointerType === "touch") return;
       dragging = true;
       lastPointerX = e.clientX;
       mount.setPointerCapture(e.pointerId);
@@ -236,13 +275,15 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
     mount.addEventListener("pointerup", onUp);
     mount.addEventListener("pointerleave", onUp);
 
-    const clock = new THREE.Clock();
+    const t0 = performance.now();
     let raf = 0;
     let lastActive = -1;
+    let running = false;
 
     const render = () => {
+      if (!running) return;
       raf = requestAnimationFrame(render);
-      const t = clock.getElapsedTime();
+      const t = (performance.now() - t0) / 1000;
 
       const prev = scrollX;
       scrollX += (targetScrollX - scrollX) * 0.17;
@@ -257,7 +298,9 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
       let nearestDist = Infinity;
       meshes.forEach((m, i) => {
         let x = m.x0 - scrollX;
-        x = ((((x + totalWidth / 2) % totalWidth) + totalWidth) % totalWidth) - totalWidth / 2;
+        x =
+          ((((x + totalWidth / 2) % totalWidth) + totalWidth) % totalWidth) -
+          totalWidth / 2;
         m.mesh.position.x = x;
         m.mesh.position.y = m.def.yOffset + Math.sin(t * 0.55 + i) * 0.03;
         m.mesh.rotation.z = m.def.rot * tilt + clampedVel * 0.012;
@@ -265,9 +308,9 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
         const d = Math.abs(x);
         const near = 1 - Math.min(1, d / 2.2);
         const mat = m.mesh.material as THREE.ShaderMaterial;
-        mat.uniforms['uVelocity']!.value = clampedVel;
-        mat.uniforms['uTime']!.value = t;
-        mat.uniforms['uFocus']!.value = near * 0.7 + focus * 0.3;
+        mat.uniforms["uVelocity"]!.value = clampedVel;
+        mat.uniforms["uTime"]!.value = t;
+        mat.uniforms["uFocus"]!.value = near * 0.7 + focus * 0.3;
         if (d < nearestDist) {
           nearestDist = d;
           nearest = i;
@@ -278,13 +321,40 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
         lastActive = nearest;
         setActive(nearest);
       }
-      (window as any).__wg = { n: meshes.length, x: meshes.map((m) => m.mesh.position.x.toFixed(2)), tex: meshes.map((m) => !!(m.mesh.material as THREE.ShaderMaterial).uniforms['uTex']!.value), vw: renderer.domElement.width };
       renderer.render(scene, camera);
     };
-    render();
+
+    const startLoop = () => {
+      if (!running) {
+        running = true;
+        raf = requestAnimationFrame(render);
+      }
+    };
+
+    const stopLoop = () => {
+      if (running) {
+        running = false;
+        cancelAnimationFrame(raf);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        const visible = entry?.isIntersecting ?? false;
+        if (visible) {
+          startLoop();
+        } else {
+          stopLoop();
+        }
+      },
+      { threshold: 0.02 },
+    );
+    observer.observe(section);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
+      observer.disconnect();
       window.removeEventListener("scroll", onScroll);
       mount.removeEventListener("pointerdown", onDown);
       mount.removeEventListener("pointermove", onMove);
@@ -294,7 +364,7 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
       meshes.forEach((m) => {
         m.mesh.geometry.dispose();
         const mat = m.mesh.material as THREE.ShaderMaterial;
-        const tex = mat.uniforms['uTex']!.value as THREE.Texture | null;
+        const tex = mat.uniforms["uTex"]!.value as THREE.Texture | null;
         tex?.dispose();
         mat.dispose();
       });
@@ -305,15 +375,27 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
   const current = slides[active]!;
 
   return (
-    <section ref={sectionRef} id="projects" className="relative h-[420vh] border-t border-ink/10">
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+    <section
+      ref={sectionRef}
+      id="projects"
+      className="relative h-[200vh] border-t border-ink/10"
+    >
+      <div className="sticky top-0 h-[100dvh] w-full overflow-hidden">
         {/* giant background wordmark */}
         <p className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none font-display text-[26vw] font-light leading-none tracking-[-0.04em] text-ink/[0.045]">
           ATELIER
         </p>
 
-        <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing">
-          <canvas ref={canvasRef} className="block h-full w-full" />
+        <div
+          ref={mountRef}
+          className="absolute inset-0 cursor-grab active:cursor-grabbing touch-pan-y"
+          style={{ touchAction: "pan-y" }}
+        >
+          <canvas
+            ref={canvasRef}
+            className="block h-full w-full"
+            style={{ touchAction: "pan-y" }}
+          />
         </div>
 
         <div className="pointer-events-none absolute inset-x-6 top-8 flex items-start justify-between gap-6 sm:inset-x-10">
@@ -323,7 +405,9 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
               Scroll to travel — drag to disturb the surface.
             </RevealText>
           </div>
-          <p className="text-[10px] font-light uppercase tracking-[0.28em] text-ink-soft">Index / MMXXVI</p>
+          <p className="text-[10px] font-light uppercase tracking-[0.28em] text-ink-soft">
+            Index / MMXXVI
+          </p>
         </div>
 
         <div className="pointer-events-none absolute inset-x-6 bottom-14 flex items-end justify-between gap-8 sm:inset-x-10">
@@ -344,12 +428,16 @@ export default function WaveGallery({ slides }: { slides: WaveSlide[] }) {
             </div>
           </div>
           <p className="hidden text-[10px] font-light uppercase tracking-[0.26em] text-ink-soft sm:block">
-            {String(active + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+            {String(active + 1).padStart(2, "0")} /{" "}
+            {String(slides.length).padStart(2, "0")}
           </p>
         </div>
 
         <div className="absolute inset-x-6 bottom-8 h-px bg-ink/12 sm:inset-x-10">
-          <motion.div style={{ width: progressWidth }} className="relative h-px bg-ink/50">
+          <motion.div
+            style={{ width: progressWidth }}
+            className="relative h-px bg-ink/50"
+          >
             <span className="absolute -right-px -top-[2px] h-[5px] w-[5px] rounded-full bg-ink/70" />
           </motion.div>
         </div>

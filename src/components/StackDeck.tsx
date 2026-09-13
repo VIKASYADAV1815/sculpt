@@ -1,5 +1,11 @@
 import { useRef } from "react";
-import { motion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
+import {
+  motion,
+  useScroll,
+  useSpring,
+  useTransform,
+  type MotionValue,
+} from "motion/react";
 import { Kicker } from "./AnimatedText";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -11,21 +17,45 @@ const CARDS = [
   { cap: "Crown of stillness", sub: "Cast plaster · three sections" },
 ];
 
-function CharCaption({ text, progress, a }: { text: string; progress: MotionValue<number>; a: number }) {
+function CharCaption({
+  text,
+  progress,
+  a,
+}: {
+  text: string;
+  progress: MotionValue<number>;
+  a: number;
+}) {
   return (
     <span className="flex overflow-hidden">
       {text.split("").map((c, i) => (
-        <Char key={`${c}-${i}`} c={c} progress={progress} a={Math.max(0, a - 0.16) + i * 0.004} />
+        <Char
+          key={`${c}-${i}`}
+          c={c}
+          progress={progress}
+          a={Math.max(0, a - 0.16) + i * 0.004}
+        />
       ))}
     </span>
   );
 }
 
-function Char({ c, progress, a }: { c: string; progress: MotionValue<number>; a: number }) {
+function Char({
+  c,
+  progress,
+  a,
+}: {
+  c: string;
+  progress: MotionValue<number>;
+  a: number;
+}) {
   const y = useTransform(progress, [a, a + 0.06], ["105%", "0%"]);
   const o = useTransform(progress, [a, a + 0.06], [0, 1]);
   return (
-    <motion.span style={{ y, opacity: o }} className="inline-block whitespace-pre will-change-transform">
+    <motion.span
+      style={{ y, opacity: o }}
+      className="inline-block whitespace-pre will-change-transform"
+    >
       {c}
     </motion.span>
   );
@@ -52,18 +82,20 @@ function Card({
 
   const y = useTransform(progress, [start, a], ["66vh", "0vh"]);
   const scale = useTransform(progress, [a, b], [1, 1 - (total - i) * 0.035]);
-  const rotate = useTransform(progress, [start, a, b], [i % 2 ? 4 : -4, 0, i % 2 ? -1.8 : 1.8]);
+  const rotate = useTransform(
+    progress,
+    [start, a, b],
+    [i % 2 ? 3 : -3, 0, i % 2 ? -1.5 : 1.5],
+  );
   const dim = useTransform(progress, [a, b], [0, 0.55]);
-  const imgScale = useTransform(progress, [start, b], [1.18, 1]);
+  const imgScale = useTransform(progress, [start, b], [1.14, 1]);
   const imgY = useTransform(progress, [start, b], ["-4%", "2%"]);
-  const blur = useTransform(progress, [a, b], [0, 3]);
-  const filter = useTransform(blur, (v) => `blur(${v}px)`);
   const lineW = useTransform(progress, [start, a + 0.06], ["0%", "100%"]);
 
   return (
     <motion.figure
-      style={{ y, scale, rotate, zIndex: i, filter }}
-      className="absolute inset-0 m-auto h-[62vh] w-[86vw] overflow-hidden rounded-[2px] border border-ink/12 bg-background will-change-transform sm:w-[54vw] lg:w-[38vw]"
+      style={{ y, scale, rotate, zIndex: i }}
+      className="absolute inset-0 m-auto h-[56vh] w-[88vw] overflow-hidden rounded-[2px] border border-ink/12 bg-background will-change-transform sm:h-[62vh] sm:w-[54vw] lg:w-[38vw]"
     >
       <motion.img
         src={src}
@@ -72,14 +104,17 @@ function Card({
         style={{ scale: imgScale, y: imgY }}
         className="h-full w-full object-cover will-change-transform"
       />
-      <motion.div style={{ opacity: dim }} className="absolute inset-0 bg-background" />
+      <motion.div
+        style={{ opacity: dim }}
+        className="absolute inset-0 bg-background"
+      />
       <div className="pointer-events-none absolute inset-0 border border-ink/10" />
 
       <span className="absolute left-5 top-5 font-display text-xs font-light tracking-[0.34em] text-ink-soft">
         0{i + 1}
       </span>
 
-      <figcaption className="absolute inset-x-0 bottom-0 border-t border-ink/10 bg-background/72 px-5 py-4 backdrop-blur-[2px]">
+      <figcaption className="absolute inset-x-0 bottom-0 border-t border-ink/10 bg-background/85 px-5 py-4 backdrop-blur-[2px]">
         <motion.div style={{ width: lineW }} className="mb-3 h-px bg-ink/35" />
         <div className="flex items-baseline justify-between gap-4">
           <span className="font-display text-base font-light italic tracking-tight text-ink sm:text-xl">
@@ -89,7 +124,9 @@ function Card({
             0{i + 1} / 04
           </span>
         </div>
-        <p className="mt-2 text-[10px] font-light uppercase tracking-[0.26em] text-ink-soft/70">{sub}</p>
+        <p className="mt-2 text-[10px] font-light uppercase tracking-[0.26em] text-ink-soft/70">
+          {sub}
+        </p>
       </figcaption>
     </motion.figure>
   );
@@ -97,22 +134,27 @@ function Card({
 
 export default function StackDeck({ images }: { images: string[] }) {
   const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  const p = useSpring(scrollYProgress, { stiffness: 80, damping: 28, mass: 0.45 });
-  const count = useTransform(p, (v) => `0${Math.min(4, Math.floor(v * 4) + 1)}`);
-  const bar = useTransform(p, [0, 1], ["0%", "100%"]);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end end"],
+  });
+  const count = useTransform(
+    scrollYProgress,
+    (v) => `0${Math.min(4, Math.floor(v * 4) + 1)}`,
+  );
+  const bar = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
   return (
-    <section ref={ref} className="relative h-[400vh] border-t border-ink/10">
-      <div className="sticky top-0 h-screen overflow-hidden">
+    <section ref={ref} className="relative h-[200vh] border-t border-ink/10">
+      <div className="sticky top-0 h-[100dvh] overflow-hidden">
         <div className="absolute inset-x-6 top-8 z-30 flex items-start justify-between gap-6 sm:inset-x-10">
           <div>
             <Kicker label="06 — The deck" />
             <motion.h2
-              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1, ease: EASE }}
+              transition={{ duration: 0.8, ease: EASE }}
               className="mt-4 max-w-md font-display text-[6vw] font-light leading-[1.05] tracking-[-0.02em] text-ink sm:text-[2.1vw]"
             >
               Four plates, laid down one over the other.
@@ -125,7 +167,15 @@ export default function StackDeck({ images }: { images: string[] }) {
 
         <div className="relative h-full w-full">
           {images.slice(0, 4).map((src, i) => (
-            <Card key={src} src={src} cap={CARDS[i]!.cap} sub={CARDS[i]!.sub} i={i} total={4} progress={p} />
+            <Card
+              key={src}
+              src={src}
+              cap={CARDS[i]!.cap}
+              sub={CARDS[i]!.sub}
+              i={i}
+              total={4}
+              progress={scrollYProgress}
+            />
           ))}
         </div>
 

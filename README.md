@@ -54,6 +54,7 @@ relief-frontend/
 ## Features
 
 ### Interactive Effects
+
 - **PlasterRevealCanvas**: Mouse-driven WebGL shader that reveals carved relief beneath plaster surface
 - **WaveGallery**: Horizontal scroll 3D gallery with liquid distortion effects
 - **Smooth Scroll**: Lenis-powered smooth scrolling with GSAP ScrollTrigger integration
@@ -61,6 +62,7 @@ relief-frontend/
 - **WordVeil**: Scroll-driven text reveal with blur effects
 
 ### Design System
+
 - **Fonts**: Cormorant Garamond (display), Jost (sans-serif)
 - **Colors**: Custom ink/plaster palette using oklch color space
 - **Animations**: Custom easing curves, stagger animations, blur transitions
@@ -68,12 +70,14 @@ relief-frontend/
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
 
 ### Installation
 
 1. **Install dependencies**:
+
    ```bash
    cd relief-frontend
    npm install
@@ -84,11 +88,13 @@ relief-frontend/
    - Place all assets in the `/public` folder
 
 3. **Run development server**:
+
    ```bash
    npm run dev
    ```
 
 4. **Build for production**:
+
    ```bash
    npm run build
    ```
@@ -132,11 +138,13 @@ relief-frontend/
 ## Development Notes
 
 ### Custom Tailwind Utilities
+
 - `rise` - Fade-in-up animation keyframe
 - Custom font families from Google Fonts
 - oklch color definitions for better color manipulation
 
 ### SSR Considerations
+
 - WebGL components are lazy-loaded client-side only
 - Error boundaries handle SSR failures gracefully
 - Custom error page with fallback UI
