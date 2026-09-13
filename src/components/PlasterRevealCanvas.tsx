@@ -309,13 +309,15 @@ export default function PlasterRevealCanvas({
       const t = (performance.now() - t0) / 1000;
 
       prev = { ...cur };
+      // Very lazy lerp — cursor lags far behind the pointer like dragging through water
       cur = {
-        x: cur.x + (target.x - cur.x) * 0.10,
-        y: cur.y + (target.y - cur.y) * 0.10,
+        x: cur.x + (target.x - cur.x) * 0.032,
+        y: cur.y + (target.y - cur.y) * 0.032,
       };
       const asp = canvas.width / canvas.height;
       const vel = Math.hypot((cur.x - prev.x) * asp, cur.y - prev.y);
-      const radius = 0.055 + Math.min(vel * 3.5, 0.072);
+      // Keep brush small and barely velocity-sensitive — slow revelation
+      const radius = 0.038 + Math.min(vel * 1.8, 0.028);
 
       // stroke pass -> b
       gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb);
@@ -329,7 +331,8 @@ export default function PlasterRevealCanvas({
       gl.uniform2f(uS.aspect, asp, 1);
       gl.uniform2f(uS.texel, 1 / mw, 1 / mh);
       gl.uniform1f(uS.radius, radius);
-      gl.uniform1f(uS.decay, 0.9920);
+      // High decay = marks persist long, need multiple slow passes to fully reveal
+      gl.uniform1f(uS.decay, 0.9978);
       gl.uniform1f(uS.time, t);
       gl.uniform1f(uS.active, hasPointer ? active : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
