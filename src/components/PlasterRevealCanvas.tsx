@@ -27,7 +27,7 @@ void main(){
 
   // Lightweight liquid diffusion
   vec2 flow = vec2(vnoise(q*2.2 + uTime*0.06), vnoise(q*2.2 + 43.1 - uTime*0.05)) - 0.5;
-  vec2 suv = v + flow * uTexel * 5.0;
+  vec2 suv = v + flow * uTexel * 1.5;
   float c = texture2D(uPrev, suv).r;
   float n1 = texture2D(uPrev, suv + vec2(uTexel.x, 0.0)*1.5).r;
   float n2 = texture2D(uPrev, suv - vec2(uTexel.x, 0.0)*1.5).r;
@@ -35,7 +35,7 @@ void main(){
   float prev = mix(c, blur, 0.5) * uDecay;
 
   // Fluid brush wandering
-  vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.75;
+  vec2 w1 = (vec2(vnoise(q*3.2 + uTime*0.07), vnoise(q*3.2 + 17.3 - uTime*0.06)) - 0.5) * uRadius * 0.12;
   vec2 qq = q + w1;
   float d = seg(qq, uA, uB);
   float r = uRadius * (0.85 + 0.28 * vnoise(q*2.2 + uTime*0.05));
@@ -73,15 +73,15 @@ void main(){
 
   // Fast liquid warp
   vec2 warpA = vec2(fbm(q*2.0 + 3.1 + uTime*0.04), fbm(q*2.0 + 9.7 - uTime*0.035)) - 0.5;
-  vec2 wuv = v + warpA * 0.07;
-  float m = mix(texture2D(uMask, v).r, texture2D(uMask, wuv).r, 0.75);
+  vec2 wuv = v + warpA * 0.028;
+  float m = mix(texture2D(uMask, v).r, texture2D(uMask, wuv).r, 0.45);
 
   float erode = (coarse - 0.5) * 0.35 + (grit - 0.5) * 0.05;
   float e = m + erode;
 
-  float reveal = smoothstep(0.22, 0.58, e);
+  float reveal = smoothstep(0.18, 0.50, e);
   reveal = reveal * reveal * (3.0 - 2.0 * reveal);
-  float rim = smoothstep(0.20, 0.42, e) - smoothstep(0.46, 0.72, e);
+  float rim = smoothstep(0.16, 0.38, e) - smoothstep(0.42, 0.66, e);
 
   vec2 refr = normalize(warpA + 1e-5) * rim * 0.018;
   vec3 back = texture2D(uBack, cover(v + refr, uRes, uImgBack)).rgb;
